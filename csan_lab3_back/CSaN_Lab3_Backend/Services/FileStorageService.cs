@@ -88,6 +88,28 @@ public class FileStorageService
         await inputStream.CopyToAsync(fileStream);
     }
 
+    public void DeleteFile(string relativePath)
+    {
+        var fullPath = GetFullPath(relativePath);
 
+        if (!File.Exists(fullPath))
+            throw new FileNotFoundException();
+
+        File.Delete(fullPath);
+    }
+
+    public IEnumerable<string> GetAllFiles()
+    {
+        var rootFullPath = Path.GetFullPath(_storageRoot);
+
+        var files = Directory.GetFiles(rootFullPath, "*", SearchOption.AllDirectories);
+
+        return files.Select(fullPath =>
+        {
+            var relativePath = Path.GetRelativePath(rootFullPath, fullPath);
+
+            return relativePath.Replace("\\", "/");
+        });
+    }
 
 }
