@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using CSaN_Lab3_Backend.Services;
-
+using CSaN_Lab3_Backend.Dtos;
 namespace CSaN_Lab3_Backend.Controllers;
 
 [ApiController]
@@ -126,7 +126,51 @@ public class FileController : ControllerBase
         }
     }
 
+    [AcceptVerbs("COPY")]
+    [Route("copy")]
+    public IActionResult CopyFile([FromBody] FileTransferRequestDto request)
+    {
+        try
+        {
+            _service.CopyFile(request.SourcePath, request.DestinationPath);
+            return Ok("Файл успешно скопирован");
+        }
+        catch (FileNotFoundException)
+        {
+            return NotFound("Исходный файл не найден");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Ошибка копирования: {ex.Message}");
+        }
+    }
 
+    [AcceptVerbs("MOVE")]
+    [Route("move")]
+    public IActionResult MoveFile([FromBody] FileTransferRequestDto request)
+    {
+        try
+        {
+            _service.MoveFile(request.SourcePath, request.DestinationPath);
+            return Ok("Файл успешно перемещён");
+        }
+        catch (FileNotFoundException)
+        {
+            return NotFound("Исходный файл не найден");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Ошибка перемещения: {ex.Message}");
+        }
+    }
 
     private string GetContentType(string fileName)
     {

@@ -10,7 +10,8 @@ builder.Services.AddCors(options =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+               .WithMethods("GET", "POST", "PUT", "DELETE", "COPY", "MOVE");
     });
 });
 

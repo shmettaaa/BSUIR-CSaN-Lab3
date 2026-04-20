@@ -112,4 +112,37 @@ public class FileStorageService
         });
     }
 
+
+    public void CopyFile(string sourcePath, string destinationPath)
+    {
+        var sourceFullPath = GetFullPath(sourcePath);
+        var destinationFullPath = GetFullPath(destinationPath);
+
+        if (!File.Exists(sourceFullPath))
+            throw new FileNotFoundException();
+
+        var dir = Path.GetDirectoryName(destinationFullPath);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+
+        File.Copy(sourceFullPath, destinationFullPath, true);
+    }
+
+
+    public void MoveFile(string sourcePath, string destinationPath)
+    {
+        var sourceFullPath = GetFullPath(sourcePath);
+        var destinationFullPath = GetFullPath(destinationPath);
+
+        if (!File.Exists(sourceFullPath))
+            throw new FileNotFoundException();
+
+        var dir = Path.GetDirectoryName(destinationFullPath);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+
+        File.Move(sourceFullPath, destinationFullPath, true);
+    }
+
+
 }
