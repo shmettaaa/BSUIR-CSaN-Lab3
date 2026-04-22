@@ -14,7 +14,7 @@ public class FileController : ControllerBase
         _service = service;
     }
 
-    [HttpGet("list")]
+    [HttpGet()]
     public IActionResult GetFiles()
     {
         try

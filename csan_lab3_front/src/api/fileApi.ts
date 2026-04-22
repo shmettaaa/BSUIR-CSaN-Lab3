@@ -39,11 +39,55 @@ export const appendToFile = async (path: string, text: string) => {
 };
 
 export const getFiles = async (): Promise<string[]> => {
-    const response = await fetch(`${BASE_URL}/list`);
+    const response = await fetch(`${BASE_URL}`);
 
     if (!response.ok) {
         throw new Error("Ошибка получения списка файлов");
     }
 
     return await response.json();
+};
+
+export const deleteFile = async (path: string) => {
+    const response = await fetch(`${BASE_URL}/${path}`, {
+        method: "DELETE"
+    });
+
+    if (!response.ok) {
+        throw new Error("Ошибка удаления файла");
+    }
+};
+
+export const copyFile = async (sourcePath: string, destinationPath: string) => {
+    const response = await fetch(`${BASE_URL}/copy`, {
+        method: "COPY",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            sourcePath,
+            destinationPath
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error("Ошибка копирования файла");
+    }
+};
+
+export const moveFile = async (sourcePath: string, destinationPath: string) => {
+    const response = await fetch(`${BASE_URL}/move`, {
+        method: "MOVE",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            sourcePath,
+            destinationPath
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error("Ошибка перемещения файла");
+    }
 };
