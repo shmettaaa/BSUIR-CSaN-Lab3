@@ -16,6 +16,10 @@ export const downloadFile = async (path: string) => {
     a.click();
 };
 
+export const openFile = (path: string) => {
+    window.open(`${BASE_URL}/open/${path}`, "_blank");
+};
+
 export const uploadFile = async (path: string, file: File) => {
     const response = await fetch(`${BASE_URL}/${path}`, {
         method: "PUT",

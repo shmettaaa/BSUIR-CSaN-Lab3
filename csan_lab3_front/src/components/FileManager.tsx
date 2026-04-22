@@ -6,8 +6,10 @@ import {
     getFiles,
     deleteFile,
     copyFile,
-    moveFile
+    moveFile,
+    openFile
 } from "../api/fileApi";
+
 
 export const FileManager = () => {
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -45,6 +47,11 @@ export const FileManager = () => {
         await downloadFile(selectedFile);
     };
 
+    const handleOpen = () => {
+        if (!selectedFile) return;
+        openFile(selectedFile);
+    };
+
     const handleDelete = async () => {
         if (!selectedFile) return;
         if (!window.confirm("Удалить файл?")) return;
@@ -59,7 +66,6 @@ export const FileManager = () => {
 
         await uploadFile(uploadPath || file.name, file);
 
-        // сброс
         setFile(null);
         setUploadPath("");
 
@@ -99,7 +105,7 @@ export const FileManager = () => {
             fontFamily: "Arial",
             background: "#f5f6f8"
         }}>
-            <h1 style={{ marginBottom: "30px" }}>File Storage</h1>
+            <h1 style={{ marginBottom: "30px" }}>Файловое хранилище</h1>
 
             <div style={{
                 display: "grid",
@@ -150,6 +156,10 @@ export const FileManager = () => {
                     <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
                         <button onClick={handleDownload} disabled={!selectedFile} style={{ flex: 1 }}>
                             Скачать
+                        </button>
+
+                        <button onClick={handleOpen} disabled={!selectedFile} style={{ flex: 1 }}>
+                            Открыть
                         </button>
 
                         <button onClick={handleDelete} disabled={!selectedFile} style={{ flex: 1 }}>
@@ -227,7 +237,7 @@ export const FileManager = () => {
                         borderRadius: "12px",
                         border: "1px solid #ddd"
                     }}>
-                        <h3>Copy / Move</h3>
+                        <h3>Копировать/Переместить</h3>
 
                         <p style={{ fontSize: "14px", color: "#666" }}>
                             {selectedFile
@@ -248,7 +258,7 @@ export const FileManager = () => {
                                 disabled={!selectedFile || !destinationPath}
                                 style={{ flex: 1 }}
                             >
-                                COPY
+                                Копировать
                             </button>
 
                             <button
@@ -256,7 +266,7 @@ export const FileManager = () => {
                                 disabled={!selectedFile || !destinationPath}
                                 style={{ flex: 1 }}
                             >
-                                MOVE
+                                Переместить
                             </button>
                         </div>
                     </div>
