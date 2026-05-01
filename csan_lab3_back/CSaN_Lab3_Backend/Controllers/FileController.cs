@@ -28,25 +28,9 @@ public class FileController : ControllerBase
         }
     }
 
-    [HttpGet("open/{*path}")]
-    public async Task<IActionResult> OpenFile(string path)
-    {
-        try
-        {
-            var stream = await _service.GetFileStreamAsync(path);
-            var contentType = GetContentType(path);
 
-            return File(stream, contentType); 
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ex.Message);
-        }
-    }
-
-
-    [HttpGet("{*path}")]                     
-    public async Task<IActionResult> GetFile(string path)
+    [HttpGet("{*path}")]
+    public async Task<IActionResult> GetFile(string path, [FromQuery] string? mode)
     {
         try
         {
@@ -54,8 +38,13 @@ public class FileController : ControllerBase
                 return BadRequest("Путь к файлу не указан");
 
             var stream = await _service.GetFileStreamAsync(path);
-
             var contentType = GetContentType(path);
+
+
+            if (mode == "open")
+            {
+                return File(stream, contentType);
+            }
 
             return File(stream, contentType, Path.GetFileName(path));
         }
