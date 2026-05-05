@@ -1,6 +1,10 @@
+using Microsoft.EntityFrameworkCore;
+using CSaN_Lab3_Backend.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSingleton<CSaN_Lab3_Backend.Services.FileStorageService>();
 
