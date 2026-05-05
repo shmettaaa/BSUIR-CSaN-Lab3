@@ -17,7 +17,7 @@ export const downloadFile = async (path: string) => {
 };
 
 export const openFile = (path: string) => {
-    window.open(`${BASE_URL}/open/${path}`, "_blank");
+    window.open(`${BASE_URL}/${path}?mode=open`, "_blank");
 };
 
 export const uploadFile = async (path: string, file: File) => {
