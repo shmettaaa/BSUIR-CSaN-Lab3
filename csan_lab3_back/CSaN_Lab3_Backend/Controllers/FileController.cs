@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using CSaN_Lab3_Backend.Services;
 using CSaN_Lab3_Backend.Dtos;
+
 namespace CSaN_Lab3_Backend.Controllers;
 
 [ApiController]
-[Route("api/files")]                    
+[Route("api/files")]
 public class FileController : ControllerBase
 {
     private readonly FileStorageService _service;
@@ -14,13 +15,13 @@ public class FileController : ControllerBase
         _service = service;
     }
 
-    [HttpGet()]
-    public IActionResult GetFiles()
+    [HttpGet]
+    public async Task<IActionResult> GetFiles()
     {
         try
         {
-            var files = _service.GetAllFiles();
-            return Ok(files);                    
+            var files = await _service.GetAllFilesAsync();
+            return Ok(files);
         }
         catch (Exception ex)
         {
@@ -28,25 +29,21 @@ public class FileController : ControllerBase
         }
     }
 
-
-    [HttpGet("{*path}")]
-    public async Task<IActionResult> GetFile(string path, [FromQuery] string? mode)
+    [HttpGet("content")]
+    public async Task<IActionResult> GetFileContent([FromQuery] string path, [FromQuery] string? mode)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(path))
                 return BadRequest("Путь к файлу не указан");
 
-            var stream = await _service.GetFileStreamAsync(path);
+            var stream = _service.GetFileStream(path);
             var contentType = GetContentType(path);
 
-
             if (mode == "open")
-            {
                 return File(stream, contentType);
-            }
-
-            return File(stream, contentType, Path.GetFileName(path));
+            else
+                return File(stream, contentType, Path.GetFileName(path));
         }
         catch (FileNotFoundException)
         {
@@ -62,8 +59,37 @@ public class FileController : ControllerBase
         }
     }
 
-    [HttpPut("{*path}")]
-    public async Task<IActionResult> PutFile(string path)
+    [HttpGet("metadata")]
+    public async Task<IActionResult> GetFileMetadata([FromQuery] string path)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return BadRequest("Путь к файлу не указан");
+
+            var metadata = await _service.GetFileMetadataAsync(path);
+            if (metadata == null)
+                return NotFound($"Файл '{path}' не найден в базе данных");
+
+            var dto = new FileMetadataDto
+            {
+                RelativePath = metadata.RelativePath,
+                FileName = metadata.FileName,
+                Size = metadata.Size,
+                ContentType = metadata.ContentType,
+                CreatedAt = metadata.CreatedAt,
+                ModifiedAt = metadata.ModifiedAt
+            };
+            return Ok(dto);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Ошибка получения метаданных: {ex.Message}");
+        }
+    }
+
+    [HttpPut]
+    public async Task<IActionResult> PutFile([FromQuery] string path)
     {
         try
         {
@@ -71,7 +97,6 @@ public class FileController : ControllerBase
                 return BadRequest("Путь к файлу не указан");
 
             await _service.SaveFileAsync(path, Request.Body);
-
             return Ok($"Файл '{path}' успешно сохранён");
         }
         catch (UnauthorizedAccessException)
@@ -84,8 +109,8 @@ public class FileController : ControllerBase
         }
     }
 
-    [HttpPost("{*path}")]
-    public async Task<IActionResult> AppendToFile(string path)
+    [HttpPost]
+    public async Task<IActionResult> AppendToFile([FromQuery] string path)
     {
         try
         {
@@ -93,7 +118,6 @@ public class FileController : ControllerBase
                 return BadRequest("Путь к файлу не указан");
 
             await _service.AppendToFileAsync(path, Request.Body);
-
             return Ok($"Данные успешно добавлены в файл '{path}'");
         }
         catch (UnauthorizedAccessException)
@@ -106,16 +130,15 @@ public class FileController : ControllerBase
         }
     }
 
-    [HttpDelete("{*path}")]
-    public IActionResult DeleteFile(string path)
+    [HttpDelete]
+    public async Task<IActionResult> DeleteFile([FromQuery] string path)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(path))
                 return BadRequest("Путь к файлу не указан");
 
-            _service.DeleteFile(path);
-
+            await _service.DeleteFileAsync(path);
             return Ok($"Файл '{path}' удалён");
         }
         catch (FileNotFoundException)
@@ -134,11 +157,11 @@ public class FileController : ControllerBase
 
     [AcceptVerbs("COPY")]
     [Route("copy")]
-    public IActionResult CopyFile([FromBody] FileTransferRequestDto request)
+    public async Task<IActionResult> CopyFile([FromBody] FileTransferRequestDto request)
     {
         try
         {
-            _service.CopyFile(request.SourcePath, request.DestinationPath);
+            await _service.CopyFileAsync(request.SourcePath, request.DestinationPath);
             return Ok("Файл успешно скопирован");
         }
         catch (FileNotFoundException)
@@ -157,11 +180,11 @@ public class FileController : ControllerBase
 
     [AcceptVerbs("MOVE")]
     [Route("move")]
-    public IActionResult MoveFile([FromBody] FileTransferRequestDto request)
+    public async Task<IActionResult> MoveFile([FromBody] FileTransferRequestDto request)
     {
         try
         {
-            _service.MoveFile(request.SourcePath, request.DestinationPath);
+            await _service.MoveFileAsync(request.SourcePath, request.DestinationPath);
             return Ok("Файл успешно перемещён");
         }
         catch (FileNotFoundException)
@@ -181,12 +204,8 @@ public class FileController : ControllerBase
     private string GetContentType(string fileName)
     {
         var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
-
         if (!provider.TryGetContentType(fileName, out var contentType))
-        {
             contentType = "application/octet-stream";
-        }
-
         return contentType;
     }
 }
