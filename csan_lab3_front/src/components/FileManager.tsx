@@ -20,11 +20,9 @@ export const FileManager = () => {
     const [files, setFiles] = useState<string[]>([]);
     const [destinationPath, setDestinationPath] = useState("");
 
-    // Состояния для модального окна свойств
     const [showProperties, setShowProperties] = useState(false);
     const [metadata, setMetadata] = useState<FileMetadata | null>(null);
 
-    // Загрузка списка файлов при монтировании
     useEffect(() => {
         const fetchFiles = async () => {
             try {
@@ -76,7 +74,7 @@ export const FileManager = () => {
         if (!selectedFile || !text.trim()) return;
         await appendToFile(selectedFile, text);
         setText("");
-        loadFiles(); // обновляем список, т.к. размер файла мог измениться
+        loadFiles();
     };
 
     const handleCopy = async () => {
@@ -94,7 +92,6 @@ export const FileManager = () => {
         loadFiles();
     };
 
-    // Новая функция: показать свойства файла
     const handleShowProperties = async () => {
         if (!selectedFile) return;
         try {
@@ -106,7 +103,6 @@ export const FileManager = () => {
         }
     };
 
-    // Форматирование размера в удобный вид (байты → КБ, МБ)
     const formatSize = (bytes: number): string => {
         if (bytes < 1024) return `${bytes} Б`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} КБ`;
@@ -129,7 +125,6 @@ export const FileManager = () => {
                 gridTemplateColumns: "1fr 400px",
                 gap: "30px"
             }}>
-                {/* Левая панель: список файлов */}
                 <div style={{
                     background: "#fff",
                     padding: "20px",
@@ -170,7 +165,6 @@ export const FileManager = () => {
                         ))}
                     </div>
 
-                    {/* Кнопки действий над файлом */}
                     <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
                         <button onClick={handleDownload} disabled={!selectedFile} style={{ flex: 1 }}>
                             Скачать
@@ -187,9 +181,8 @@ export const FileManager = () => {
                     </div>
                 </div>
 
-                {/* Правая панель: операции */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                    {/* Загрузка файла */}
+
                     <div style={{
                         background: "#fff",
                         padding: "20px",
@@ -216,7 +209,6 @@ export const FileManager = () => {
                         </button>
                     </div>
 
-                    {/* Добавление текста */}
                     <div style={{
                         background: "#fff",
                         padding: "20px",
@@ -242,7 +234,6 @@ export const FileManager = () => {
                         </button>
                     </div>
 
-                    {/* Копирование / перемещение */}
                     <div style={{
                         background: "#fff",
                         padding: "20px",
