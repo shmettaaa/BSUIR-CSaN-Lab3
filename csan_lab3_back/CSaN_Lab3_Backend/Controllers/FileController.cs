@@ -99,6 +99,10 @@ public class FileController : ControllerBase
             await _service.SaveFileAsync(path, Request.Body);
             return Ok($"Файл '{path}' успешно сохранён");
         }
+        catch (IOException ex) when (ex.Message.Contains("being used") || ex.Message.Contains("занят"))
+        {
+            return Conflict($"Файл '{path}' занят другим пользователем. Попробуйте позже.");
+        }
         catch (UnauthorizedAccessException)
         {
             return Forbid();
@@ -119,6 +123,10 @@ public class FileController : ControllerBase
 
             await _service.AppendToFileAsync(path, Request.Body);
             return Ok($"Данные успешно добавлены в файл '{path}'");
+        }
+        catch (IOException ex) when (ex.Message.Contains("being used") || ex.Message.Contains("занят"))
+        {
+            return Conflict($"Файл '{path}' занят другим пользователем. Попробуйте позже.");
         }
         catch (UnauthorizedAccessException)
         {
@@ -145,6 +153,10 @@ public class FileController : ControllerBase
         {
             return NotFound($"Файл '{path}' не найден");
         }
+        catch (IOException ex) when (ex.Message.Contains("being used") || ex.Message.Contains("занят"))
+        {
+            return Conflict($"Файл '{path}' занят другим пользователем. Попробуйте позже.");
+        }
         catch (UnauthorizedAccessException)
         {
             return Forbid();
@@ -168,6 +180,10 @@ public class FileController : ControllerBase
         {
             return NotFound("Исходный файл не найден");
         }
+        catch (IOException ex) when (ex.Message.Contains("being used") || ex.Message.Contains("занят"))
+        {
+            return Conflict("Файл занят другим пользователем. Попробуйте позже.");
+        }
         catch (UnauthorizedAccessException)
         {
             return Forbid();
@@ -190,6 +206,10 @@ public class FileController : ControllerBase
         catch (FileNotFoundException)
         {
             return NotFound("Исходный файл не найден");
+        }
+        catch (IOException ex) when (ex.Message.Contains("being used") || ex.Message.Contains("занят"))
+        {
+            return Conflict("Файл занят другим пользователем. Попробуйте позже.");
         }
         catch (UnauthorizedAccessException)
         {

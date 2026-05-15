@@ -1,1 +1,8 @@
-This is a text file for Rabin algorithm)
+This is a text file for Rabin algorithm)ууИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИИЭЭЭЭЭЭААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААBBBBDDDDCCCCCCCПервый пользователь: Hello World!
+Второй пользователь: Goodbye World!
+Second User: Goodbye World!
+First User: Hello World!
+Second User: Goodbye World!
+First User: Hello World!
+First User: Hello World!
+Second User: Goodbye World!
