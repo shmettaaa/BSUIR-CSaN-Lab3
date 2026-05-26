@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
-using CSaN_Lab3_Backend.Data;
+﻿using CSaN_Lab3_Backend.Data;
 using CSaN_Lab3_Backend.Entities;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System.Collections.Concurrent;
 
 namespace CSaN_Lab3_Backend.Services;
 
@@ -12,11 +13,8 @@ public class FileStorageService
     private readonly AppDbContext _context;
     private readonly FileExtensionContentTypeProvider _contentTypeProvider;
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _fileLocks = new();
-
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _fileLocks = new();
     private static readonly SemaphoreSlim _syncLock = new SemaphoreSlim(1, 1);
-
-    private static readonly SemaphoreSlim _dbLock = new SemaphoreSlim(1, 1);
 
     public FileStorageService(IConfiguration configuration, AppDbContext context)
     {
@@ -63,45 +61,26 @@ public class FileStorageService
 
     public async Task SaveFileAsync(string relativePath, Stream inputStream)
     {
-        var threadId = Environment.CurrentManagedThreadId;
-        var now = DateTime.Now.ToString("HH:mm:ss.fff");
-
-        Console.WriteLine($"[{now}][{threadId}] НАЧАЛО: {relativePath}");
-
         var fileLock = GetFileLock(relativePath);
-
-        Console.WriteLine($"[{now}][{threadId}] ОЖИДАНИЕ БЛОКИРОВКИ: {relativePath}");
         await fileLock.WaitAsync();
-        Console.WriteLine($"[{now}][{threadId}] БЛОКИРОВКА ПОЛУЧЕНА: {relativePath}");
 
         try
         {
             var fullPath = GetFullPath(relativePath);
-            Console.WriteLine($"[{now}][{threadId}] ПОЛНЫЙ ПУТЬ: {fullPath}");
-
             var directory = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrEmpty(directory))
-            {
                 Directory.CreateDirectory(directory);
-                Console.WriteLine($"[{now}][{threadId}] ДИРЕКТОРИЯ СОЗДАНА: {directory}");
-            }
 
-            // Важно: позиционируем поток в начало
             if (inputStream.CanSeek)
-            {
                 inputStream.Position = 0;
-            }
 
-            Console.WriteLine($"[{now}][{threadId}] НАЧАЛО ЗАПИСИ ФАЙЛА НА ДИСК");
             using var fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
             await inputStream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
-            Console.WriteLine($"[{now}][{threadId}] ФАЙЛ ЗАПИСАН. РАЗМЕР: {fileStream.Length}");
 
             var fileInfo = new FileInfo(fullPath);
             var contentType = GetContentType(relativePath);
 
-            Console.WriteLine($"[{now}][{threadId}] ОБНОВЛЕНИЕ БД");
             var existing = await _context.Files.FirstOrDefaultAsync(f => f.RelativePath == relativePath);
             if (existing == null)
             {
@@ -115,7 +94,6 @@ public class FileStorageService
                     ModifiedAt = fileInfo.LastWriteTimeUtc
                 };
                 await _context.Files.AddAsync(metadata);
-                Console.WriteLine($"[{now}][{threadId}] ЗАПИСЬ ДОБАВЛЕНА В БД");
             }
             else
             {
@@ -124,34 +102,19 @@ public class FileStorageService
                 existing.ContentType = contentType;
                 existing.ModifiedAt = fileInfo.LastWriteTimeUtc;
                 _context.Files.Update(existing);
-                Console.WriteLine($"[{now}][{threadId}] ЗАПИСЬ ОБНОВЛЕНА В БД");
             }
             await _context.SaveChangesAsync();
-
-            Console.WriteLine($"[{now}][{threadId}] ЗАВЕРШЕНО УСПЕШНО: {relativePath}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[{now}][{threadId}] ОШИБКА: {ex.Message}");
-            Console.WriteLine($"[{now}][{threadId}] СТЭК: {ex.StackTrace}");
-            throw;
         }
         finally
         {
             fileLock.Release();
-            Console.WriteLine($"[{now}][{threadId}] БЛОКИРОВКА ОСВОБОЖДЕНА: {relativePath}");
         }
     }
+
     public async Task AppendToFileAsync(string relativePath, Stream inputStream)
     {
-        var threadId = Environment.CurrentManagedThreadId;
-        var now = DateTime.Now.ToString("HH:mm:ss.fff");
-
-        Console.WriteLine($"[{now}][{threadId}] APPEND НАЧАЛО: {relativePath}");
-
         var fileLock = GetFileLock(relativePath);
         await fileLock.WaitAsync();
-        Console.WriteLine($"[{now}][{threadId}] APPEND БЛОКИРОВКА ПОЛУЧЕНА");
 
         try
         {
@@ -178,13 +141,10 @@ public class FileStorageService
                 existing.ModifiedAt = fileInfo.LastWriteTimeUtc;
                 await _context.SaveChangesAsync();
             }
-
-            Console.WriteLine($"[{now}][{threadId}] APPEND ГОТОВО. НОВЫЙ РАЗМЕР: {fileInfo.Length}");
         }
         finally
         {
             fileLock.Release();
-            Console.WriteLine($"[{now}][{threadId}] APPEND БЛОКИРОВКА СНЯТА");
         }
     }
 
@@ -192,25 +152,18 @@ public class FileStorageService
     {
         var fileLock = GetFileLock(relativePath);
         await fileLock.WaitAsync();
+
         try
         {
             var fullPath = GetFullPath(relativePath);
             if (!File.Exists(fullPath))
-                throw new FileNotFoundException();
+                throw new FileNotFoundException($"Файл не найден: {relativePath}");
 
-            await _dbLock.WaitAsync();
-            try
+            var metadata = await _context.Files.FirstOrDefaultAsync(f => f.RelativePath == relativePath);
+            if (metadata != null)
             {
-                var metadata = await _context.Files.FirstOrDefaultAsync(f => f.RelativePath == relativePath);
-                if (metadata != null)
-                {
-                    _context.Files.Remove(metadata);
-                    await _context.SaveChangesAsync();
-                }
-            }
-            finally
-            {
-                _dbLock.Release();
+                _context.Files.Remove(metadata);
+                await _context.SaveChangesAsync();
             }
 
             File.Delete(fullPath);
@@ -240,7 +193,7 @@ public class FileStorageService
                 var destFullPath = GetFullPath(destinationPath);
 
                 if (!File.Exists(sourceFullPath))
-                    throw new FileNotFoundException();
+                    throw new FileNotFoundException($"Исходный файл не найден: {sourcePath}");
 
                 var dir = Path.GetDirectoryName(destFullPath);
                 if (!string.IsNullOrEmpty(dir))
@@ -249,26 +202,19 @@ public class FileStorageService
                 File.Copy(sourceFullPath, destFullPath, true);
 
                 var destFileInfo = new FileInfo(destFullPath);
+                var contentType = GetContentType(destinationPath);
 
-                await _dbLock.WaitAsync();
-                try
+                var destMetadata = new FileMetadata
                 {
-                    var destMetadata = new FileMetadata
-                    {
-                        RelativePath = destinationPath,
-                        FileName = Path.GetFileName(destinationPath),
-                        Size = destFileInfo.Length,
-                        ContentType = GetContentType(destinationPath),
-                        CreatedAt = DateTime.UtcNow,
-                        ModifiedAt = destFileInfo.LastWriteTimeUtc
-                    };
-                    await _context.Files.AddAsync(destMetadata);
-                    await _context.SaveChangesAsync();
-                }
-                finally
-                {
-                    _dbLock.Release();
-                }
+                    RelativePath = destinationPath,
+                    FileName = Path.GetFileName(destinationPath),
+                    Size = destFileInfo.Length,
+                    ContentType = contentType,
+                    CreatedAt = DateTime.UtcNow,
+                    ModifiedAt = destFileInfo.LastWriteTimeUtc
+                };
+                await _context.Files.AddAsync(destMetadata);
+                await _context.SaveChangesAsync();
             }
             finally
             {
@@ -299,7 +245,7 @@ public class FileStorageService
                 var destFullPath = GetFullPath(destinationPath);
 
                 if (!File.Exists(sourceFullPath))
-                    throw new FileNotFoundException();
+                    throw new FileNotFoundException($"Исходный файл не найден: {sourcePath}");
 
                 var dir = Path.GetDirectoryName(destFullPath);
                 if (!string.IsNullOrEmpty(dir))
@@ -307,22 +253,14 @@ public class FileStorageService
 
                 File.Move(sourceFullPath, destFullPath, true);
 
-                await _dbLock.WaitAsync();
-                try
+                var metadata = await _context.Files.FirstOrDefaultAsync(f => f.RelativePath == sourcePath);
+                if (metadata != null)
                 {
-                    var metadata = await _context.Files.FirstOrDefaultAsync(f => f.RelativePath == sourcePath);
-                    if (metadata != null)
-                    {
-                        metadata.RelativePath = destinationPath;
-                        metadata.FileName = Path.GetFileName(destinationPath);
-                        metadata.ModifiedAt = File.GetLastWriteTimeUtc(destFullPath);
-                        metadata.ContentType = GetContentType(destinationPath);
-                        await _context.SaveChangesAsync();
-                    }
-                }
-                finally
-                {
-                    _dbLock.Release();
+                    metadata.RelativePath = destinationPath;
+                    metadata.FileName = Path.GetFileName(destinationPath);
+                    metadata.ModifiedAt = File.GetLastWriteTimeUtc(destFullPath);
+                    metadata.ContentType = GetContentType(destinationPath);
+                    await _context.SaveChangesAsync();
                 }
             }
             finally
@@ -359,30 +297,18 @@ public class FileStorageService
                 var existsInDb = await _context.Files.AnyAsync(f => f.RelativePath == relPath);
                 if (!existsInDb)
                 {
-                    await _dbLock.WaitAsync();
-                    try
+                    var fullPath = GetFullPath(relPath);
+                    var fileInfo = new FileInfo(fullPath);
+                    var metadata = new FileMetadata
                     {
-                        existsInDb = await _context.Files.AnyAsync(f => f.RelativePath == relPath);
-                        if (!existsInDb)
-                        {
-                            var fullPath = GetFullPath(relPath);
-                            var fileInfo = new FileInfo(fullPath);
-                            var metadata = new FileMetadata
-                            {
-                                RelativePath = relPath,
-                                FileName = Path.GetFileName(relPath),
-                                Size = fileInfo.Length,
-                                ContentType = GetContentType(relPath),
-                                CreatedAt = fileInfo.CreationTimeUtc,
-                                ModifiedAt = fileInfo.LastWriteTimeUtc
-                            };
-                            await _context.Files.AddAsync(metadata);
-                        }
-                    }
-                    finally
-                    {
-                        _dbLock.Release();
-                    }
+                        RelativePath = relPath,
+                        FileName = Path.GetFileName(relPath),
+                        Size = fileInfo.Length,
+                        ContentType = GetContentType(relPath),
+                        CreatedAt = fileInfo.CreationTimeUtc,
+                        ModifiedAt = fileInfo.LastWriteTimeUtc
+                    };
+                    await _context.Files.AddAsync(metadata);
                 }
             }
             await _context.SaveChangesAsync();
