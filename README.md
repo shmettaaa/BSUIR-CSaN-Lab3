@@ -1,11 +1,11 @@
 # BSUIR-CSaN-Lab3(Distant File Storage)
 What it does:
 Client-server application for managing the distant file storage(folder) located on server's computer. 
-Supports create, read, update, delete operations via web interface.
+Supports create, read, update, delete operations via web interface, stores file info in PostgreSQL database.
 
 # Stack:
 
-Backend: C# (.NET), ASP.NET Core Web API (REST API architecture)
+Backend: C# (.NET), ASP.NET Core Web API (REST API architecture), Entity Framework Core, PostrgeSQL.
 Frontend: TypeScript, CSS, HTML
 
 # Screenshots:
